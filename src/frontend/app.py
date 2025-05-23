@@ -37,7 +37,7 @@ class StockPredictorFrontend(QMainWindow):
         form_layout.addRow("Тикер:", self.ticker_input)
         
         self.period_combo = QComboBox()
-        self.period_combo.addItems(["1 год", "5 лет"])
+        self.period_combo.addItems(["1 год", "5 лет", "10 лет"])
         form_layout.addRow("Период:", self.period_combo)
         
         ticker_group.setLayout(form_layout)
@@ -116,7 +116,13 @@ class StockPredictorFrontend(QMainWindow):
             self.info_display.setText("Введите тикер")
             return
         
-        period = '1y' if self.period_combo.currentText() == "1 год" else '5y'
+        if self.period_combo.currentText() == "1 год":
+            period = '1y'
+        elif self.period_combo.currentText() == "5 лет":
+            period = '5y'
+        elif self.period_combo.currentText() == "10 лет":
+            period = '10y'
+            
         success, message = self.backend.load_data_from_yfinance(ticker, period)
         
         self.info_display.setText(message)
@@ -160,15 +166,16 @@ class StockPredictorFrontend(QMainWindow):
         if historical_data is not None:
             # Исторические данные
             ax.plot(historical_data.index, historical_data.values, 
-                   label='Исторические данные', color='blue')
+                label='Исторические данные', color='blue')
             
             # Тестовые и прогнозные данные
             if y_test is not None and y_pred is not None:
+                # Используем последние n дат для тестовых данных
                 test_dates = historical_data.index[-len(y_test):]
-                ax.plot(test_dates, y_test.values, 
-                       label='Фактические значения', color='green')
+                ax.plot(test_dates, y_test, 
+                    label='Фактические значения', color='green')
                 ax.plot(test_dates, y_pred, 
-                       label='Прогноз', color='red', linestyle='--')
+                    label='Прогноз', color='red', linestyle='--')
             
             ax.set_title('Исторические данные и прогноз')
             ax.set_xlabel('Дата')
@@ -184,7 +191,10 @@ class StockPredictorFrontend(QMainWindow):
         success, result = self.backend.train_model(model_name)
         
         if success:
-            message, (y_test, y_pred) = result
+            # Получаем данные из словаря result
+            message = result['message']
+            y_test = result['y_test']
+            y_pred = result['y_pred']
             self.info_display.setText(message)
             self.plot_data(y_test, y_pred)
         else:
